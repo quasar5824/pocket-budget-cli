@@ -59,6 +59,14 @@ class BudgetManager:
         
         return [{"Category": k, "Total": v} for k, v in summary.items()]
 
+    def filter_transactions(self, query=None, category=None):
+        filtered = self.data["transactions"]
+        if category:
+            filtered = [t for t in filtered if t['category'].lower() == category.lower()]
+        if query:
+            filtered = [t for t in filtered if query.lower() in t['description'].lower()]
+        return filtered
+
     def export_to_csv(self, filename="budget_export.csv"):
         if not self.data["transactions"]:
             return False
@@ -80,8 +88,9 @@ def main():
         print("3. Add Income/Expense")
         print("4. Delete Transaction")
         print("5. Export to CSV")
-        print("6. Reset All Data")
-        print("7. Exit")
+        print("6. Search/Filter Transactions")
+        print("7. Reset All Data")
+        print("8. Exit")
         
         choice = input("Choose an option: ")
         
@@ -141,6 +150,20 @@ def main():
                 print("No transactions to export.")
 
         elif choice == "6":
+            print("\n--- Filter Options ---")
+            print("Leave blank to ignore filter")
+            cat_filter = input("Category: ")
+            query_filter = input("Keyword in description: ")
+            
+            filtered = manager.filter_transactions(query=query_filter, category=cat_filter)
+            if filtered:
+                # Note: IDs here are relative to the filtered list, not the original indices
+                table_data = [[t['date'], t['description'], t['amount'], t['category']] for t in filtered]
+                print(tabulate(table_data, headers=["Date", "Description", "Amount", "Category"], tablefmt="grid"))
+            else:
+                print("No matching transactions found.")
+
+        elif choice == "7":
             confirm = input("Are you sure you want to clear all data? (y/N): ")
             if confirm.lower() == 'y':
                 manager.clear_all()
@@ -148,7 +171,7 @@ def main():
             else:
                 print("Reset cancelled.")
 
-        elif choice == "7":
+        elif choice == "8":
             break
         else:
             print("Invalid choice.")
