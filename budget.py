@@ -37,6 +37,14 @@ class BudgetManager:
     def get_report(self):
         return self.data
 
+    def get_category_summary(self):
+        summary = {}
+        for t in self.data["transactions"]:
+            cat = t["category"]
+            summary[cat] = summary.get(cat, 0.0) + t["amount"]
+        
+        return [{"Category": k, "Total": v} for k, v in summary.items()]
+
 def main():
     manager = BudgetManager()
     
@@ -52,7 +60,12 @@ def main():
         if choice == "1":
             report = manager.get_report()
             print(f"\nCurrent Balance: ${report['balance']:.2f}")
+            
             if report['transactions']:
+                print("\nCategory Summary:")
+                summary = manager.get_category_summary()
+                print(tabulate(summary, headers="keys", tablefmt="grid"))
+                
                 print("\nTransactions:")
                 print(tabulate(report['transactions'], headers="keys", tablefmt="grid"))
             else:
