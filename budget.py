@@ -46,6 +46,32 @@ class BudgetManager:
         })
         self._save_data()
 
+    def update_transaction(self, index, description=None, amount=None, category=None):
+        try:
+            transaction = self.data["transactions"][index]
+            
+            if amount is not None:
+                # Adjust balance by removing old amount and adding new amount
+                old_amount = transaction["amount"]
+                new_amount = float(amount)
+                self.data["balance"] = self.data["balance"] - old_amount + new_amount
+                transaction["amount"] = new_amount
+            
+            if description is not None:
+                if not description.strip():
+                    raise ValueError("Description cannot be empty.")
+                transaction["description"] = description
+                
+            if category is not None:
+                if not category.strip():
+                    raise ValueError("Category cannot be empty.")
+                transaction["category"] = category
+            
+            self._save_data()
+            return True
+        except (IndexError, ValueError) as e:
+            raise e
+
     def delete_transaction(self, index):
         try:
             transaction = self.data["transactions"].pop(index)
@@ -97,12 +123,13 @@ def main():
         print("1. View Balance & Report")
         print("2. Set Initial Balance")
         print("3. Add Income/Expense")
-        print("4. Delete Transaction")
-        print("5. Export to CSV")
-        print("6. Search/Filter Transactions")
-        print("7. Set Budget Goal")
-        print("8. Reset All Data")
-        print("9. Exit")
+        print("4. Edit Transaction")
+        print("5. Delete Transaction")
+        print("6. Export to CSV")
+        print("7. Search/Filter Transactions")
+        print("8. Set Budget Goal")
+        print("9. Reset All Data")
+        print("10. Exit")
         
         choice = input("Choose an option: ")
         
@@ -147,6 +174,26 @@ def main():
 
         elif choice == "4":
             if not manager.data["transactions"]:
+                print("No transactions to edit.")
+                continue
+            try:
+                idx = int(input("Enter Transaction ID to edit: "))
+                print("Leave blank to keep current value")
+                desc = input("New Description: ")
+                amount_str = input("New Amount: ")
+                cat = input("New Category: ")
+                
+                amount = float(amount_str) if amount_str.strip() else None
+                desc = desc if desc.strip() else None
+                cat = cat if cat.strip() else None
+                
+                if manager.update_transaction(idx, desc, amount, cat):
+                    print("Transaction updated.")
+            except (ValueError, IndexError) as e:
+                print(f"Error: {e}")
+
+        elif choice == "5":
+            if not manager.data["transactions"]:
                 print("No transactions to delete.")
                 continue
             try:
@@ -158,14 +205,14 @@ def main():
             except ValueError:
                 print("Please enter a valid number.")
 
-        elif choice == "5":
+        elif choice == "6":
             filename = input("Enter filename (default: budget_export.csv): ") or "budget_export.csv"
             if manager.export_to_csv(filename):
                 print(f"Data successfully exported to {filename}")
             else:
                 print("No transactions to export.")
 
-        elif choice == "6":
+        elif choice == "7":
             print("\n--- Filter Options ---")
             print("Leave blank to ignore filter")
             cat_filter = input("Category: ")
@@ -178,7 +225,7 @@ def main():
             else:
                 print("No matching transactions found.")
 
-        elif choice == "7":
+        elif choice == "8":
             try:
                 goal = float(input("Enter your budget goal amount: "))
                 manager.set_budget_goal(goal)
@@ -186,7 +233,7 @@ def main():
             except ValueError:
                 print("Invalid amount.")
 
-        elif choice == "8":
+        elif choice == "9":
             confirm = input("Are you sure you want to clear all data? (y/N): ")
             if confirm.lower() == 'y':
                 manager.clear_all()
@@ -194,7 +241,7 @@ def main():
             else:
                 print("Reset cancelled.")
 
-        elif choice == "9":
+        elif choice == "10":
             break
         else:
             print("Invalid choice.")
