@@ -1,5 +1,6 @@
 import json
 import os
+import csv
 from datetime import datetime
 from tabulate import tabulate
 
@@ -58,6 +59,17 @@ class BudgetManager:
         
         return [{"Category": k, "Total": v} for k, v in summary.items()]
 
+    def export_to_csv(self, filename="budget_export.csv"):
+        if not self.data["transactions"]:
+            return False
+        
+        keys = self.data["transactions"][0].keys()
+        with open(filename, "w", newline="") as f:
+            dict_writer = csv.DictWriter(f, fieldnames=keys)
+            dict_writer.writeheader()
+            dict_writer.writerows(self.data["transactions"])
+        return True
+
 def main():
     manager = BudgetManager()
     
@@ -67,8 +79,9 @@ def main():
         print("2. Set Initial Balance")
         print("3. Add Income/Expense")
         print("4. Delete Transaction")
-        print("5. Reset All Data")
-        print("6. Exit")
+        print("5. Export to CSV")
+        print("6. Reset All Data")
+        print("7. Exit")
         
         choice = input("Choose an option: ")
         
@@ -121,6 +134,13 @@ def main():
                 print("Please enter a valid number.")
 
         elif choice == "5":
+            filename = input("Enter filename (default: budget_export.csv): ") or "budget_export.csv"
+            if manager.export_to_csv(filename):
+                print(f"Data successfully exported to {filename}")
+            else:
+                print("No transactions to export.")
+
+        elif choice == "6":
             confirm = input("Are you sure you want to clear all data? (y/N): ")
             if confirm.lower() == 'y':
                 manager.clear_all()
@@ -128,7 +148,7 @@ def main():
             else:
                 print("Reset cancelled.")
 
-        elif choice == "6":
+        elif choice == "7":
             break
         else:
             print("Invalid choice.")
