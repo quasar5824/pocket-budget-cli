@@ -13,8 +13,12 @@ class BudgetManager:
     def _load_data(self):
         if os.path.exists(DATA_FILE):
             with open(DATA_FILE, "r") as f:
-                return json.load(f)
-        return {"balance": 0.0, "transactions": []}
+                data = json.load(f)
+                # Ensure budget_goal exists for backward compatibility
+                if "budget_goal" not in data:
+                    data["budget_goal"] = None
+                return data
+        return {"balance": 0.0, "transactions": [], "budget_goal": None}
 
     def _save_data(self):
         with open(DATA_FILE, "w") as f:
@@ -24,7 +28,14 @@ class BudgetManager:
         self.data["balance"] = float(amount)
         self._save_data()
 
+    def set_budget_goal(self, amount):
+        self.data["budget_goal"] = float(amount)
+        self._save_data()
+
     def add_transaction(self, description, amount, category):
+        if not description.strip() or not category.strip():
+            raise ValueError("Description and Category cannot be empty.")
+        
         amount = float(amount)
         self.data["balance"] += amount
         self.data["transactions"].append({
@@ -45,7 +56,7 @@ class BudgetManager:
             return False
 
     def clear_all(self):
-        self.data = {"balance": 0.0, "transactions": []}
+        self.data = {"balance": 0.0, "transactions": [], "budget_goal": None}
         self._save_data()
 
     def get_report(self):
@@ -89,8 +100,9 @@ def main():
         print("4. Delete Transaction")
         print("5. Export to CSV")
         print("6. Search/Filter Transactions")
-        print("7. Reset All Data")
-        print("8. Exit")
+        print("7. Set Budget Goal")
+        print("8. Reset All Data")
+        print("9. Exit")
         
         choice = input("Choose an option: ")
         
@@ -98,13 +110,17 @@ def main():
             report = manager.get_report()
             print(f"\nCurrent Balance: ${report['balance']:.2f}")
             
+            if report['budget_goal'] is not None:
+                diff = report['balance'] - report['budget_goal']
+                status = "Above" if diff >= 0 else "Below"
+                print(f"Budget Goal: ${report['budget_goal']:.2f} ({status} by ${abs(diff):.2f})")
+
             if report['transactions']:
                 print("\nCategory Summary:")
                 summary = manager.get_category_summary()
                 print(tabulate(summary, headers="keys", tablefmt="grid"))
                 
                 print("\nTransactions:")
-                # Enumerating transactions to provide index for deletion
                 table_data = [[i, t['date'], t['description'], t['amount'], t['category']] 
                              for i, t in enumerate(report['transactions'])]
                 print(tabulate(table_data, headers=["ID", "Date", "Description", "Amount", "Category"], tablefmt="grid"))
@@ -126,8 +142,8 @@ def main():
                 cat = input("Category: ")
                 manager.add_transaction(desc, amount, cat)
                 print("Transaction recorded.")
-            except ValueError:
-                print("Invalid amount.")
+            except ValueError as e:
+                print(f"Error: {e}")
 
         elif choice == "4":
             if not manager.data["transactions"]:
@@ -157,13 +173,20 @@ def main():
             
             filtered = manager.filter_transactions(query=query_filter, category=cat_filter)
             if filtered:
-                # Note: IDs here are relative to the filtered list, not the original indices
                 table_data = [[t['date'], t['description'], t['amount'], t['category']] for t in filtered]
                 print(tabulate(table_data, headers=["Date", "Description", "Amount", "Category"], tablefmt="grid"))
             else:
                 print("No matching transactions found.")
 
         elif choice == "7":
+            try:
+                goal = float(input("Enter your budget goal amount: "))
+                manager.set_budget_goal(goal)
+                print("Budget goal set.")
+            except ValueError:
+                print("Invalid amount.")
+
+        elif choice == "8":
             confirm = input("Are you sure you want to clear all data? (y/N): ")
             if confirm.lower() == 'y':
                 manager.clear_all()
@@ -171,7 +194,7 @@ def main():
             else:
                 print("Reset cancelled.")
 
-        elif choice == "8":
+        elif choice == "9":
             break
         else:
             print("Invalid choice.")
