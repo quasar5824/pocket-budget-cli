@@ -34,6 +34,19 @@ class BudgetManager:
         })
         self._save_data()
 
+    def delete_transaction(self, index):
+        try:
+            transaction = self.data["transactions"].pop(index)
+            self.data["balance"] -= transaction["amount"]
+            self._save_data()
+            return True
+        except IndexError:
+            return False
+
+    def clear_all(self):
+        self.data = {"balance": 0.0, "transactions": []}
+        self._save_data()
+
     def get_report(self):
         return self.data
 
@@ -53,7 +66,9 @@ def main():
         print("1. View Balance & Report")
         print("2. Set Initial Balance")
         print("3. Add Income/Expense")
-        print("4. Exit")
+        print("4. Delete Transaction")
+        print("5. Reset All Data")
+        print("6. Exit")
         
         choice = input("Choose an option: ")
         
@@ -67,7 +82,10 @@ def main():
                 print(tabulate(summary, headers="keys", tablefmt="grid"))
                 
                 print("\nTransactions:")
-                print(tabulate(report['transactions'], headers="keys", tablefmt="grid"))
+                # Enumerating transactions to provide index for deletion
+                table_data = [[i, t['date'], t['description'], t['amount'], t['category']] 
+                             for i, t in enumerate(report['transactions'])]
+                print(tabulate(table_data, headers=["ID", "Date", "Description", "Amount", "Category"], tablefmt="grid"))
             else:
                 print("No transactions yet.")
                 
@@ -88,8 +106,29 @@ def main():
                 print("Transaction recorded.")
             except ValueError:
                 print("Invalid amount.")
-                
+
         elif choice == "4":
+            if not manager.data["transactions"]:
+                print("No transactions to delete.")
+                continue
+            try:
+                idx = int(input("Enter Transaction ID to delete: "))
+                if manager.delete_transaction(idx):
+                    print("Transaction deleted.")
+                else:
+                    print("Invalid ID.")
+            except ValueError:
+                print("Please enter a valid number.")
+
+        elif choice == "5":
+            confirm = input("Are you sure you want to clear all data? (y/N): ")
+            if confirm.lower() == 'y':
+                manager.clear_all()
+                print("Data reset successfully.")
+            else:
+                print("Reset cancelled.")
+
+        elif choice == "6":
             break
         else:
             print("Invalid choice.")
